@@ -1,5 +1,0 @@
-{
-  "prompt": "Fix the bug in add.py so the checks pass.",
-  "test_command": "python3 check.py",
-  "description": "add(a, b) returns a - b instead of a + b. The fix is to add the two arguments."
-}

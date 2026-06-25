@@ -1,0 +1,6 @@
+{
+  "prompt": "Create these files at the project root. settings.py with a line DEBUG = False. logging.conf with a section header [loggers]. .env.example with a line API_KEY=. Makefile with a target named run.",
+  "test_command": "python3 check.py",
+  "description": "created_file elicitation. Four files of different kinds. The dotfile .env.example is easy to forget.",
+  "claim_target": "created_file"
+}

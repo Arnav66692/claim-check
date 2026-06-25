@@ -1,5 +1,0 @@
-{
-  "prompt": "Implement title_case in textutil.py so the checks pass.",
-  "test_command": "python3 check.py",
-  "description": "title_case should capitalize the first letter of each word in the string."
-}

@@ -1,0 +1,3 @@
+# backup copy, safe to remove
+def main():
+    return "app"
