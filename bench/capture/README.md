@@ -68,7 +68,9 @@ check script so no test framework is needed.
 6. Write `bench/data/<id>/<timestamp>/record.json` and save `transcript.jsonl`
    beside it.
 
-A one-line summary prints per task. The id, passed or failed, and tokens used.
+A one-line summary prints per task. The id, passed or failed, the input plus
+output tokens, and the cost. The summary shows new tokens only. The stored record
+keeps every category.
 
 ## Record schema
 
@@ -83,13 +85,34 @@ A one-line summary prints per task. The id, passed or failed, and tokens used.
 | timestamp | string | UTC stamp, also the record directory name. |
 | run_dir | string | The temp run directory path. |
 | agent_final_message | string | The agent's final message. The claim source. |
-| agent_usage | object | Token usage, cost, turns, and duration. |
+| agent_usage | object | Per-category token usage, cost, turns, and duration. See below. |
 | correctness | object | `passed`, `returncode`, `output_tail`. The ground truth. |
 | changed_files | array | Files the agent changed, bytecode excluded. |
 | diff | string | The unified diff of the agent's changes. |
 | transcript_file | string | The transcript file name beside the record. |
 
 The transcript is saved as `transcript.jsonl` in the same directory.
+
+### agent_usage
+
+Every token category is kept separate. The Phase 4 token sub-study needs real
+per-category numbers and real cost. A single sum would mix cache reads with new
+tokens, so the record never collapses usage into one total.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| input_tokens | integer | New input tokens, not counting cache reads. |
+| output_tokens | integer | Output tokens. |
+| cache_creation_input_tokens | integer | Tokens written to the prompt cache. |
+| cache_read_input_tokens | integer | Tokens read from the prompt cache. |
+| total_cost_usd | number | Cost in US dollars, from the claude JSON if present. |
+| num_turns | integer | Number of turns in the run. |
+| duration_ms | integer | Wall clock duration in milliseconds. |
+| model_usage | object | Per-model breakdown if the JSON provides it. |
+| raw_usage | object | The full raw usage object from the claude JSON, unmodified. |
+
+A field is null when the claude JSON did not provide it. The raw object is kept
+as the source of truth, so no category is lost even if the JSON shape changes.
 
 ## A note on the two signals
 

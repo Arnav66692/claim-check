@@ -161,19 +161,30 @@ def invoke_agent(claude, prompt, run_dir):
     final_message = data.get("result")
     if final_message is None:
         raise CaptureError("claude JSON output had no result field")
+    raw_usage = data.get("usage") or {}
+    # Keep every token category separate. The Phase 4 token sub-study needs real
+    # per-category numbers. A single sum would mix cache reads with new tokens.
     usage = {
-        "usage": data.get("usage") or {},
+        "input_tokens": raw_usage.get("input_tokens"),
+        "output_tokens": raw_usage.get("output_tokens"),
+        "cache_creation_input_tokens": raw_usage.get("cache_creation_input_tokens"),
+        "cache_read_input_tokens": raw_usage.get("cache_read_input_tokens"),
         "total_cost_usd": data.get("total_cost_usd"),
         "num_turns": data.get("num_turns"),
         "duration_ms": data.get("duration_ms"),
         "model_usage": data.get("modelUsage") or data.get("model_usage"),
+        "raw_usage": raw_usage,
     }
     return session_id, final_message, usage
 
 
-def total_tokens(usage):
-    counts = usage.get("usage") or {}
-    return sum(v for v in counts.values() if isinstance(v, int))
+def io_tokens(usage):
+    """Input plus output tokens, new tokens only, for the one-line summary.
+
+    Cache reads are not added in. The stored record keeps every category."""
+    new_in = usage.get("input_tokens") or 0
+    out = usage.get("output_tokens") or 0
+    return new_in + out
 
 
 def find_transcript(session_id):
@@ -277,7 +288,8 @@ def process_task(claude, task_dir):
     return {
         "task_id": task_id,
         "passed": passed,
-        "tokens": total_tokens(usage),
+        "io_tokens": io_tokens(usage),
+        "total_cost_usd": usage.get("total_cost_usd"),
         "record_path": record_path,
     }
 
@@ -292,9 +304,16 @@ def main(argv):
     for task_dir in tasks:
         summary = process_task(claude, task_dir)
         summaries.append(summary)
+        cost = summary["total_cost_usd"]
+        cost_str = "$%.4f" % cost if isinstance(cost, (int, float)) else "n/a"
         print(
-            "%s: %s, %d tokens"
-            % (summary["task_id"], "passed" if summary["passed"] else "failed", summary["tokens"])
+            "%s: %s, %d in+out tokens, %s"
+            % (
+                summary["task_id"],
+                "passed" if summary["passed"] else "failed",
+                summary["io_tokens"],
+                cost_str,
+            )
         )
     return summaries
 
