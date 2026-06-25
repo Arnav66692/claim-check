@@ -1,0 +1,39 @@
+# claim-check settings. These override the defaults baked into verify.py.
+# Every value is optional. Delete a line to fall back to the default.
+
+[settings]
+
+# Treat an unverifiable pass claim as a block instead of a warning.
+# Keep this false. Precision first. A false block is worse than a missed claim.
+strict_unverified = false
+
+# Cap how many evidence lines a single result prints.
+max_evidence = 8
+
+# Substrings that mark a command as a test or build run. Used when a pass
+# claim does not name its own command.
+test_command_patterns = [
+  "npm test",
+  "pytest",
+  "go test",
+  "cargo test",
+  "jest",
+  "vitest",
+  "make",
+]
+
+# Symbols too generic to verify with git grep. These return a warning, not a block.
+stopwords = [
+  "config",
+  "data",
+  "value",
+  "result",
+  "test",
+  "file",
+  "path",
+  "name",
+  "type",
+  "error",
+  "main",
+  "index",
+]

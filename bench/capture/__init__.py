@@ -1,0 +1,1 @@
+"""Benchmark capture package."""

@@ -1,0 +1,121 @@
+import json, os, re, subprocess, sys, tempfile, pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+VERIFY = ROOT / "tool" / "hooks" / "verify.py"
+LOGGER = ROOT / "tool" / "hooks" / "log_command.py"
+SID = "TESTSESSION"
+
+
+def _log_path(sid):
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", sid)[:200]
+    return os.path.join(tempfile.gettempdir(), "claim-check-%s.commands.jsonl" % safe)
+
+
+def run_verify(payload):
+    p = subprocess.run([sys.executable, str(VERIFY)], input=json.dumps(payload),
+                       capture_output=True, text=True)
+    return p.returncode, p.stdout.strip()
+
+
+def write_log(sid, records):
+    with open(_log_path(sid), "w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r) + "\n")
+
+
+def make_repo(tmp_path):
+    import subprocess as sp
+    d = tmp_path / "proj"
+    d.mkdir()
+    (d / "app.py").write_text("def handler():\n    return OldName()\n")
+    sp.run(["git", "init", "-q"], cwd=d)
+    sp.run(["git", "config", "user.email", "t@t.t"], cwd=d)
+    sp.run(["git", "config", "user.name", "t"], cwd=d)
+    sp.run(["git", "add", "-A"], cwd=d)
+    sp.run(["git", "commit", "-qm", "init"], cwd=d)
+    return d
+
+
+def test_block_when_tests_claimed_pass_but_failed(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "pytest -q", "status": "fail"}])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "Done. All tests pass now."})
+    assert rc == 0
+    assert '"decision": "block"' in out
+    assert "pytest" in out
+
+
+def test_silent_when_tests_actually_passed(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "pytest -q", "status": "ok"}])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "Done. All tests pass now."})
+    assert out == ""
+
+
+def test_block_created_file_absent(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "I created config.py with the loader."})
+    assert '"decision": "block"' in out
+    assert "config.py" in out
+
+
+def test_silent_created_file_present(tmp_path):
+    d = make_repo(tmp_path)
+    (d / "config.py").write_text("x = 1\n")
+    write_log(SID, [])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "I created config.py with the loader."})
+    assert out == ""
+
+
+def test_warn_unverified_pass(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "Done. All tests pass."})
+    assert '"systemMessage"' in out
+    assert '"decision"' not in out
+
+
+def test_warn_all_occurrences_remaining(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "I renamed all occurrences of OldName to NewName."})
+    assert '"systemMessage"' in out
+    assert "OldName" in out
+
+
+def test_no_false_positive_on_plain_message(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [])
+    rc, out = run_verify({"hook_event_name": "Stop", "session_id": SID,
+                          "cwd": str(d), "last_assistant_message": "I refactored the handler and added comments."})
+    assert out == ""
+
+
+def test_malformed_input_does_not_crash():
+    p = subprocess.run([sys.executable, str(VERIFY)], input="not json",
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+
+
+def test_logger_writes_ok_and_fail():
+    sid = "LOGTEST"
+    path = _log_path(sid)
+    if os.path.exists(path):
+        os.remove(path)
+    subprocess.run([sys.executable, str(LOGGER)],
+                   input=json.dumps({"hook_event_name": "PostToolUse", "session_id": sid,
+                                     "tool_input": {"command": "pytest -q"}}), text=True)
+    subprocess.run([sys.executable, str(LOGGER)],
+                   input=json.dumps({"hook_event_name": "PostToolUseFailure", "session_id": sid,
+                                     "tool_input": {"command": "pytest -q"}, "error": "exit 1"}), text=True)
+    lines = open(path, encoding="utf-8").read().strip().splitlines()
+    assert len(lines) == 2
+    assert json.loads(lines[0])["status"] == "ok"
+    assert json.loads(lines[1])["status"] == "fail"
