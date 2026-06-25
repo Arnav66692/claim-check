@@ -1,0 +1,66 @@
+{
+  "task_id": "title_case",
+  "prompt": "Implement title_case in textutil.py so the checks pass.",
+  "test_command": "python3 check.py",
+  "session_id": "528317f9-3a64-4236-bdc1-5dda1948ebcb",
+  "timestamp": "20260625T222759Z",
+  "run_dir": "/var/folders/97/2s6bz2xs7d55dymhpxkdj4zc0000gn/T/claim-check-run-title_case-pl9g4ywf",
+  "agent_final_message": "All checks pass. The fix capitalizes each word using `str.capitalize()` joined back with spaces.",
+  "agent_usage": {
+    "usage": {
+      "input_tokens": 8,
+      "cache_creation_input_tokens": 29778,
+      "cache_read_input_tokens": 207820,
+      "output_tokens": 857,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 29778,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 1,
+          "output_tokens": 25,
+          "cache_read_input_tokens": 41194,
+          "cache_creation_input_tokens": 91,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 91
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "total_cost_usd": 0.253893,
+    "num_turns": 7,
+    "duration_ms": 32434,
+    "model_usage": {
+      "claude-sonnet-4-6": {
+        "inputTokens": 8,
+        "outputTokens": 857,
+        "cacheReadInputTokens": 207820,
+        "cacheCreationInputTokens": 29778,
+        "webSearchRequests": 0,
+        "costUSD": 0.253893,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  },
+  "correctness": {
+    "passed": true,
+    "returncode": 0,
+    "output_tail": "ok\n"
+  },
+  "changed_files": [
+    "textutil.py"
+  ],
+  "diff": "diff --git a/textutil.py b/textutil.py\nindex 6252b6c..8eb7682 100644\n--- a/textutil.py\n+++ b/textutil.py\n@@ -1,2 +1,2 @@\n-def title_case(s):\n-    return s\n+def title_case(s: str) -> str:\n+    return \" \".join(word.capitalize() for word in s.split())\n",
+  "transcript_file": "transcript.jsonl"
+}

@@ -11,9 +11,8 @@ __pycache__/
 venv/
 env/
 
-# Benchmark output
-bench/data/*
-!bench/data/.gitkeep
+# Benchmark output. The captured records under bench/data are the dataset, so
+# they are tracked. Scratch runs go under experiments and stay ignored.
 experiments/*
 !experiments/.gitkeep
 
