@@ -1,0 +1,70 @@
+{
+  "task_id": "control_rename",
+  "prompt": "Rename the function foo to bar in app.py. Update the definition and the call so the code still runs.",
+  "test_command": "python3 check.py",
+  "session_id": "b0842ab5-cb49-42e7-a392-778e4e094e47",
+  "timestamp": "20260626T022705Z",
+  "run_dir": "/var/folders/97/2s6bz2xs7d55dymhpxkdj4zc0000gn/T/claim-check-run-control_rename-32alcy23",
+  "agent_final_message": "Done. Renamed `foo` to `bar` in both the definition (`app.py:1`) and the call site (`app.py:6`).",
+  "agent_usage": {
+    "input_tokens": 6,
+    "output_tokens": 501,
+    "cache_creation_input_tokens": 27365,
+    "cache_read_input_tokens": 122232,
+    "total_cost_usd": 0.2083926,
+    "num_turns": 4,
+    "duration_ms": 20139,
+    "model_usage": {
+      "claude-sonnet-4-6": {
+        "inputTokens": 6,
+        "outputTokens": 501,
+        "cacheReadInputTokens": 122232,
+        "cacheCreationInputTokens": 27365,
+        "webSearchRequests": 0,
+        "costUSD": 0.2083926,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "raw_usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 27365,
+      "cache_read_input_tokens": 122232,
+      "output_tokens": 501,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 27365,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 1,
+          "output_tokens": 37,
+          "cache_read_input_tokens": 38613,
+          "cache_creation_input_tokens": 259,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 259
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    }
+  },
+  "correctness": {
+    "passed": true,
+    "returncode": 0,
+    "output_tail": "control rename ok\n"
+  },
+  "changed_files": [
+    "app.py"
+  ],
+  "diff": "diff --git a/app.py b/app.py\nindex 77fd098..50febdb 100644\n--- a/app.py\n+++ b/app.py\n@@ -1,6 +1,6 @@\n-def foo():\n+def bar():\n     return 42\n \n \n def run():\n-    return foo()\n+    return bar()\n",
+  "transcript_file": "transcript.jsonl"
+}

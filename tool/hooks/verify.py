@@ -319,25 +319,42 @@ CHECKS = {
 }
 
 
+def find_claim_matches(message):
+    """Detect completion claims in a message.
+
+    Returns a list of (rule, match) for every rule regex that matches. This is
+    claim-check's claim detection. It is the single source of truth, shared by
+    the Stop hook here and the benchmark analysis, so both use one definition."""
+    matches = []
+    for rule in RULES:
+        regex = re.compile(rule["regex"], re.IGNORECASE)
+        for match in regex.finditer(message or ""):
+            matches.append((rule, match))
+    return matches
+
+
+def claimed_done(message):
+    """True if the message contains at least one completion claim."""
+    return bool(find_claim_matches(message))
+
+
 def evaluate(message, entries, settings, cwd):
     """Run every rule over the message. Return a list of result dicts."""
     results = []
-    for rule in RULES:
-        regex = re.compile(rule["regex"], re.IGNORECASE)
-        for match in regex.finditer(message):
-            captured = None
-            if rule["capture"] is not None:
-                captured = match.group(rule["capture"])
-            check = CHECKS[rule["check"]]
-            status, evidence = check(captured, entries, settings, cwd)
-            results.append(
-                {
-                    "rule": rule["name"],
-                    "tier": rule["tier"],
-                    "status": status,
-                    "evidence": evidence,
-                }
-            )
+    for rule, match in find_claim_matches(message):
+        captured = None
+        if rule["capture"] is not None:
+            captured = match.group(rule["capture"])
+        check = CHECKS[rule["check"]]
+        status, evidence = check(captured, entries, settings, cwd)
+        results.append(
+            {
+                "rule": rule["name"],
+                "tier": rule["tier"],
+                "status": status,
+                "evidence": evidence,
+            }
+        )
     return results
 
 

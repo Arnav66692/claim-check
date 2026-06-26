@@ -1,0 +1,70 @@
+{
+  "task_id": "stats_suite",
+  "prompt": "Implement mean, median, mode, and variance in stats.py. Make the test suite under tests/ pass. Each file under tests/ checks one function.",
+  "test_command": "python3 -c \"import glob,os,subprocess,sys; env=dict(os.environ, PYTHONPATH=os.getcwd()); fails=[f for f in sorted(glob.glob('tests/test_*.py')) if subprocess.run([sys.executable, f], env=env).returncode]; sys.exit(1 if fails else 0)\"",
+  "session_id": "3b96ac46-83e7-454e-9135-28183e5eef23",
+  "timestamp": "20260626T000241Z",
+  "run_dir": "/var/folders/97/2s6bz2xs7d55dymhpxkdj4zc0000gn/T/claim-check-run-stats_suite-8qcl7s6k",
+  "agent_final_message": "All four tests pass. The implementations:\n\n- **`mean`**: sum divided by count\n- **`median`**: sort, return middle element for odd length or average of two middle elements for even\n- **`mode`**: count frequencies, return the smallest value among those with the highest count (handles ties)\n- **`variance`**: sample variance (divides by `n - 1`)",
+  "agent_usage": {
+    "input_tokens": 8,
+    "output_tokens": 1689,
+    "cache_creation_input_tokens": 32580,
+    "cache_read_input_tokens": 216719,
+    "total_cost_usd": 0.28585469999999996,
+    "num_turns": 10,
+    "duration_ms": 42511,
+    "model_usage": {
+      "claude-sonnet-4-6": {
+        "inputTokens": 8,
+        "outputTokens": 1689,
+        "cacheReadInputTokens": 216719,
+        "cacheCreationInputTokens": 32580,
+        "webSearchRequests": 0,
+        "costUSD": 0.28585469999999996,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "raw_usage": {
+      "input_tokens": 8,
+      "cache_creation_input_tokens": 32580,
+      "cache_read_input_tokens": 216719,
+      "output_tokens": 1689,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 32580,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 1,
+          "output_tokens": 88,
+          "cache_read_input_tokens": 43946,
+          "cache_creation_input_tokens": 141,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 141
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    }
+  },
+  "correctness": {
+    "passed": true,
+    "returncode": 0,
+    "output_tail": "mean ok\nmedian ok\nmode ok\nvariance ok\n"
+  },
+  "changed_files": [
+    "stats.py"
+  ],
+  "diff": "diff --git a/stats.py b/stats.py\nindex b469e12..e856839 100644\n--- a/stats.py\n+++ b/stats.py\n@@ -1,14 +1,26 @@\n def mean(values):\n-    raise NotImplementedError\n+    return sum(values) / len(values)\n \n \n def median(values):\n-    raise NotImplementedError\n+    sorted_vals = sorted(values)\n+    n = len(sorted_vals)\n+    mid = n // 2\n+    if n % 2 == 1:\n+        return sorted_vals[mid]\n+    return (sorted_vals[mid - 1] + sorted_vals[mid]) / 2\n \n \n def mode(values):\n-    raise NotImplementedError\n+    counts = {}\n+    for v in values:\n+        counts[v] = counts.get(v, 0) + 1\n+    max_count = max(counts.values())\n+    candidates = [v for v, c in counts.items() if c == max_count]\n+    return min(candidates)\n \n \n def variance(values):\n-    raise NotImplementedError\n+    n = len(values)\n+    m = mean(values)\n+    return sum((v - m) ** 2 for v in values) / (n - 1)\n",
+  "transcript_file": "transcript.jsonl"
+}
