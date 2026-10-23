@@ -248,6 +248,8 @@ def verification_argv(command):
         "tox": {"-l", "-a", "--listenvs", "--listenvs-all", "--showconfig", "--notest"},
         "make": {"-n", "-q", "-t", "--touch", "--recon"},
     }
+    if argv[0] in {"pytest", "py.test"}:
+        non_runs |= {"-V", "--funcargs", "--cache-show"}
     non_runs |= runner_flags.get(argv[0], set())
     if any(arg.split("=", 1)[0] in non_runs for arg in argv[1:]):
         return None
