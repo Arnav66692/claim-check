@@ -242,9 +242,9 @@ def verification_argv(command):
     non_runs = {"--help", "-h", "--version", "--collect-only", "--co",
                 "--listTests", "--list-tests", "--list", "--no-run", "--dry-run",
                 "--show-only", "--just-print", "--question", "--fixtures",
-                "--fixtures-per-test", "--markers", "--trace-config", "--setup-plan"}
+                "--fixtures-per-test", "--markers", "--trace-config", "--setup-plan", "--setup-only"}
     runner_flags = {
-        "go": {"-list", "-c"},
+        "go": {"-list", "-c", "-n"},
         "tox": {"-l", "-a", "--listenvs", "--listenvs-all", "--showconfig", "--notest"},
         "make": {"-n", "-q", "-t", "--touch", "--recon"},
     }

@@ -134,7 +134,7 @@ def test_non_verification_commands_never_support_test_claim(tmp_path):
     d = make_repo(tmp_path)
     for command in ["echo pytest", "printf 'pytest'", "make clean", "pytest || true",
                     "pytest; echo done", "pytest | tee results.txt", "pytest --collect-only",
-                    "pytest --version", "npm test -- --listTests", "pytest --fixtures -q", "go test -list ."]:
+                    "pytest --version", "npm test -- --listTests", "pytest --fixtures -q", "go test -list .", "go test -n ./...", "pytest --setup-only"]:
         write_log(SID, [{"command": command, "status": "ok"}])
         _, out = run_verify({"session_id": SID, "cwd": str(d),
                              "last_assistant_message": "All tests pass."})
@@ -163,3 +163,11 @@ def test_direct_python_module_command_supports_tests(tmp_path):
     _, out = run_verify({"session_id": SID, "cwd": str(d),
                          "last_assistant_message": "All tests pass."})
     assert not out
+
+
+def test_build_dry_run_cannot_support_build_claim(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "go build -n ./...", "status": "ok"}])
+    _, out = run_verify({"session_id": SID, "cwd": str(d),
+                         "last_assistant_message": "The build passes."})
+    assert "systemMessage" in json.loads(out)
