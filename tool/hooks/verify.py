@@ -253,6 +253,28 @@ def verification_argv(command):
     non_runs |= runner_flags.get(argv[0], set())
     if any(arg.split("=", 1)[0] in non_runs for arg in argv[1:]):
         return None
+    if argv[0] == "make":
+        # Normalize scheduling/verbosity options, retaining all actual targets.
+        # Extra targets and recipe overrides remain ambiguous and cannot pass.
+        normalized = ["make"]
+        i = 1
+        while i < len(argv):
+            arg = argv[i]
+            if arg in {"-s", "--silent", "--quiet", "--no-print-directory",
+                       "-k", "--keep-going", "-B", "--always-make"}:
+                i += 1
+                continue
+            if re.fullmatch(r"-j[0-9]+|--jobs=[0-9]+", arg):
+                i += 1
+                continue
+            if arg in {"-j", "--jobs"}:
+                i += 1
+                if i < len(argv) and argv[i].isdigit():
+                    i += 1
+                continue
+            normalized.append(arg)
+            i += 1
+        argv = normalized
     return argv
 
 

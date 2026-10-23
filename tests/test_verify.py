@@ -171,3 +171,17 @@ def test_build_dry_run_cannot_support_build_claim(tmp_path):
     _, out = run_verify({"session_id": SID, "cwd": str(d),
                          "last_assistant_message": "The build passes."})
     assert "systemMessage" in json.loads(out)
+
+
+def test_parallel_make_failure_supersedes_success(tmp_path):
+    d = make_repo(tmp_path)
+    for command in ["make test -j2", "make -j 2 test", "make --jobs=2 test"]:
+        write_log(SID, [{"command": "make test", "status": "ok"},
+                        {"command": command, "status": "fail"}])
+        _, out = run_verify({"session_id": SID, "cwd": str(d),
+                             "last_assistant_message": "All tests pass."})
+        assert json.loads(out)["decision"] == "block", command
+        write_log(SID, [{"command": command, "status": "ok"}])
+        _, out = run_verify({"session_id": SID, "cwd": str(d),
+                             "last_assistant_message": "All tests pass."})
+        assert out == "", command
