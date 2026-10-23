@@ -134,7 +134,7 @@ def test_non_verification_commands_never_support_test_claim(tmp_path):
     d = make_repo(tmp_path)
     for command in ["echo pytest", "printf 'pytest'", "make clean", "pytest || true",
                     "pytest; echo done", "pytest | tee results.txt", "pytest --collect-only",
-                    "pytest --version", "npm test -- --listTests", "pytest --fixtures -q", "go test -list .", "go test -n ./...", "pytest --setup-only", "pytest -V", "pytest --funcargs", "pytest --cache-show"]:
+                    "pytest --version", "npm test -- --listTests", "pytest --fixtures -q", "go test -list .", "go test -n ./...", "pytest --setup-only", "pytest -V", "pytest --funcargs", "pytest --cache-show", "pytest --collectonly", "jest --showConfig", "npm test --if-present"]:
         write_log(SID, [{"command": command, "status": "ok"}])
         _, out = run_verify({"session_id": SID, "cwd": str(d),
                              "last_assistant_message": "All tests pass."})

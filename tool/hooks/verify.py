@@ -240,7 +240,7 @@ def verification_argv(command):
             return None
         argv = argv[2:]
     non_runs = {"--help", "-h", "--version", "--collect-only", "--co",
-                "--listTests", "--list-tests", "--list", "--no-run", "--dry-run",
+                "--listTests", "--showConfig", "--if-present", "--passWithNoTests", "--list-tests", "--list", "--no-run", "--dry-run",
                 "--show-only", "--just-print", "--question", "--fixtures",
                 "--fixtures-per-test", "--markers", "--trace-config", "--setup-plan", "--setup-only"}
     runner_flags = {
@@ -249,7 +249,7 @@ def verification_argv(command):
         "make": {"-n", "-q", "-t", "--touch", "--recon"},
     }
     if argv[0] in {"pytest", "py.test"}:
-        non_runs |= {"-V", "--funcargs", "--cache-show"}
+        non_runs |= {"-V", "--funcargs", "--cache-show", "--collectonly"}
     non_runs |= runner_flags.get(argv[0], set())
     if any(arg.split("=", 1)[0] in non_runs for arg in argv[1:]):
         return None
