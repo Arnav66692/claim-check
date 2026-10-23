@@ -14,6 +14,7 @@ Design rules.
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -35,14 +36,10 @@ DEFAULT_SETTINGS = {
     "strict_unverified": False,
     "max_evidence": 8,
     "test_command_patterns": [
-        "npm test",
-        "pytest",
-        "go test",
-        "cargo test",
-        "jest",
-        "vitest",
-        "make",
+        "pytest", "unittest", "npm test", "npm run test", "go test", "cargo test",
+        "jest", "vitest run", "make test", "make check",
     ],
+    "build_command_patterns": ["npm run build", "cargo build", "go build", "make build"],
     "stopwords": [
         "config",
         "data",
@@ -67,7 +64,14 @@ RULES = [
         "name": "tests_pass",
         "tier": "block",
         "check": "command_pass",
-        "regex": r"all tests pass|tests passing|the build passes|everything passes",
+        "regex": r"all tests pass|tests passing|everything passes",
+        "capture": None,
+    },
+    {
+        "name": "build_pass",
+        "tier": "block",
+        "check": "build_pass",
+        "regex": r"the build passes",
         "capture": None,
     },
     {
@@ -209,17 +213,98 @@ def _extract_text(content):
 # ----- Checks. Each returns (status, evidence). -----
 
 
+def command_argv(command):
+    """Recognize a single command, never infer success from shell text.
+
+    Pipelines, substitutions, redirects and compound commands cannot supply
+    per-command exit status in the current log format, so remain unverified.
+    """
+    if not isinstance(command, str) or any(c in command for c in ";&|<>`$\n\r"):
+        return None
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return None
+    if not argv:
+        return None
+    return argv
+
+
+def verification_argv(command):
+    argv = command_argv(command)
+    if not argv:
+        return None
+    argv[0] = os.path.basename(argv[0])
+    if re.fullmatch(r"python(?:[0-9]+(?:\.[0-9]+)*)?", argv[0]):
+        if len(argv) < 3 or argv[1] != "-m":
+            return None
+        argv = argv[2:]
+    non_runs = {"--help", "-h", "--version", "--collect-only", "--co",
+                "--listTests", "--showConfig", "--if-present", "--passWithNoTests", "--list-tests", "--list", "--no-run", "--dry-run",
+                "--show-only", "--just-print", "--question", "--fixtures",
+                "--fixtures-per-test", "--markers", "--trace-config", "--setup-plan", "--setup-only"}
+    runner_flags = {
+        "go": {"-list", "-c", "-n"},
+        "tox": {"-l", "-a", "--listenvs", "--listenvs-all", "--showconfig", "--notest"},
+        "make": {"-n", "-q", "-t", "--touch", "--recon"},
+    }
+    if argv[0] in {"pytest", "py.test"}:
+        non_runs |= {"-V", "--funcargs", "--cache-show", "--collectonly"}
+    non_runs |= runner_flags.get(argv[0], set())
+    if any(arg.split("=", 1)[0] in non_runs for arg in argv[1:]):
+        return None
+    if argv[0] == "make":
+        # Normalize scheduling/verbosity options, retaining all actual targets.
+        # Extra targets and recipe overrides remain ambiguous and cannot pass.
+        normalized = ["make"]
+        i = 1
+        while i < len(argv):
+            arg = argv[i]
+            if arg in {"-s", "--silent", "--quiet", "--no-print-directory",
+                       "-k", "--keep-going", "-B", "--always-make"}:
+                i += 1
+                continue
+            if re.fullmatch(r"-j[0-9]+|--jobs=[0-9]+", arg):
+                i += 1
+                continue
+            if arg in {"-j", "--jobs"}:
+                i += 1
+                if i < len(argv) and argv[i].isdigit():
+                    i += 1
+                continue
+            normalized.append(arg)
+            i += 1
+        argv = normalized
+    return argv
+
+
+def matches_command(command, prefixes):
+    argv = verification_argv(command)
+    if not argv:
+        return False
+    for prefix in prefixes:
+        expected = verification_argv(prefix)
+        if expected and argv[:len(expected)] == expected:
+            # make accepts extra targets; a later cleanup is not a test pass.
+            if argv[0] == "make" and len(argv) != len(expected):
+                continue
+            return True
+    return False
+
+
 def check_command_pass(captured, entries, settings, cwd):
     captured = (captured or "").strip()
     if captured:
-        matched = [e for e in entries if captured in (e.get("command") or "")]
+        expected = command_argv(captured)
+        matched = [e for e in entries if expected and
+                   command_argv(e.get("command")) == expected]
         label = "`%s`" % captured
     else:
         patterns = settings["test_command_patterns"]
         matched = [
             e
             for e in entries
-            if any(pat in (e.get("command") or "") for pat in patterns)
+            if matches_command(e.get("command"), patterns)
         ]
         label = "tests"
     if not matched:
@@ -230,7 +315,15 @@ def check_command_pass(captured, entries, settings, cwd):
     latest = matched[-1]
     if latest.get("status") == "fail":
         return REFUTED, "claimed %s passed but `%s` failed" % (label, latest.get("command") or "")
+    if latest.get("status") != "ok":
+        return WARN, "matching command has no confirmed exit status"
     return SUPPORTED, ""
+
+
+def check_build_pass(captured, entries, settings, cwd):
+    build_settings = dict(settings, test_command_patterns=settings["build_command_patterns"])
+    status, evidence = check_command_pass(captured, entries, build_settings, cwd)
+    return status, evidence.replace("claimed tests", "claimed build")
 
 
 def _resolve(path, cwd):
@@ -312,6 +405,7 @@ def check_test_added(captured, entries, settings, cwd):
 
 CHECKS = {
     "command_pass": check_command_pass,
+    "build_pass": check_build_pass,
     "file_created": check_file_created,
     "file_deleted": check_file_deleted,
     "all_occurrences": check_all_occurrences,
