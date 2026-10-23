@@ -10,17 +10,13 @@ strict_unverified = false
 # Cap how many evidence lines a single result prints.
 max_evidence = 8
 
-# Substrings that mark a command as a test or build run. Used when a pass
-# claim does not name its own command.
+# Direct command argv prefixes. Shell pipelines/chains and dry runs are
+# unverified. "make" alone is intentionally not a verification command.
 test_command_patterns = [
-  "npm test",
-  "pytest",
-  "go test",
-  "cargo test",
-  "jest",
-  "vitest",
-  "make",
+  "pytest", "unittest", "npm test", "npm run test", "go test", "cargo test",
+  "jest", "vitest run", "make test", "make check",
 ]
+build_command_patterns = ["npm run build", "cargo build", "go build", "make build"]
 
 # Symbols too generic to verify with git grep. These return a warning, not a block.
 stopwords = [

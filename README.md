@@ -1,10 +1,17 @@
 # claim-check
 
-A Claude Code hook that catches false "done" claims. When an agent says it
+A deterministic Claude Code hook that checks supported completion claims. When an agent says it
 created a file, ran a command, or made the tests pass, claim-check verifies the
 claim against the real state of the repo and the real command log. If the claim
 is false, the run is blocked or warned. If the claim holds, claim-check stays
 silent.
+
+[![CI](https://github.com/Arnav66692/claim-check/actions/workflows/ci.yml/badge.svg)](https://github.com/Arnav66692/claim-check/actions/workflows/ci.yml)
+
+**Evidence:** [120 recorded trials](FINDINGS.md) produced zero observed false
+completions, with zero failing ground truths. This is a negative result, not a
+measurement of recall on false claims. Extraction is regex-based and narrow;
+claims outside the supported forms can be missed.
 
 ## Why
 
@@ -44,7 +51,8 @@ Each check returns one of four results.
 
 | Rule | Tier | Check |
 | --- | --- | --- |
-| tests_pass | block | a pass claim matches a real passing command run |
+| tests_pass | block | latest recognized direct test command passed |
+| build_pass | block | latest recognized direct build command passed |
 | ran_named_command | block | a named command in backticks actually ran and passed |
 | created_file | block | a created or written file exists on disk |
 | deleted_file | warn | a deleted file is really gone |
@@ -75,7 +83,30 @@ python3 -m venv .venv
 
 ## Benchmark
 
-`bench/` holds the skeleton for measuring how often agents make unsupported
-claims. The claim extractor and checks in `tool/` are the benchmark labeling
-pipeline. The benchmark reuses them. It does not build a second labeler. See
-`CLAUDE.md` for that rule.
+[`FINDINGS.md`](FINDINGS.md) reports the 120-trial experiment, confidence intervals,
+and limitations. `bench/` contains the capture harness, records, and analysis.
+The benchmark imports the tool's claim extractor rather than a second labeler.
+
+```bash
+python -m bench.analyze.integrity
+```
+
+The integrity sweep checks committed records. Original run directories are not
+included, so a fresh clone cannot repeat their byte-level checks.
+
+## Evidence boundaries
+
+Only direct argv prefixes in `tool/claims.toml` establish generic test/build
+claims. `python -m pytest` and executable paths are supported. Echoed names,
+cleanup targets, help/list/collection modes, and compound shell commands do not
+establish a pass. Run verification separately from `cd`, pipes, and `&&` chains.
+The latest recognized run controls the result; unrelated successful commands do
+not erase a failure. Named-command claims require an exact argv match.
+
+Logs describe commands observed in this session, not a cryptographic attestation
+of the working tree. A targeted test run does not establish whole-suite coverage;
+changes after the run can invalidate its result. Custom runners and unusual flags
+need explicit configuration and review. Fail-open hooks are advisory controls,
+not a security boundary against an agent that can edit the hook or its log.
+
+MIT licensed. See [CONTRIBUTING.md](CONTRIBUTING.md) for review and release guidance.

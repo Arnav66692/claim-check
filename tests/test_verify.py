@@ -119,3 +119,47 @@ def test_logger_writes_ok_and_fail():
     assert len(lines) == 2
     assert json.loads(lines[0])["status"] == "ok"
     assert json.loads(lines[1])["status"] == "fail"
+
+
+def test_unrelated_success_cannot_erase_failed_test_evidence(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "pytest -q", "status": "fail"},
+                    {"command": "make clean", "status": "ok"}])
+    _, out = run_verify({"session_id": SID, "cwd": str(d),
+                         "last_assistant_message": "All tests pass."})
+    assert json.loads(out)["decision"] == "block"
+
+
+def test_non_verification_commands_never_support_test_claim(tmp_path):
+    d = make_repo(tmp_path)
+    for command in ["echo pytest", "printf 'pytest'", "make clean", "pytest || true",
+                    "pytest; echo done", "pytest | tee results.txt", "pytest --collect-only",
+                    "pytest --version", "npm test -- --listTests", "pytest --fixtures -q", "go test -list ."]:
+        write_log(SID, [{"command": command, "status": "ok"}])
+        _, out = run_verify({"session_id": SID, "cwd": str(d),
+                             "last_assistant_message": "All tests pass."})
+        assert "systemMessage" in json.loads(out), command
+
+
+def test_named_command_requires_exact_argv(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "echo pytest -q", "status": "ok"}])
+    _, out = run_verify({"session_id": SID, "cwd": str(d),
+                         "last_assistant_message": "I ran `pytest -q`."})
+    assert "systemMessage" in json.loads(out)
+
+
+def test_build_claim_cannot_use_test_evidence(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": "pytest", "status": "ok"}])
+    _, out = run_verify({"session_id": SID, "cwd": str(d),
+                         "last_assistant_message": "The build passes."})
+    assert "systemMessage" in json.loads(out)
+
+
+def test_direct_python_module_command_supports_tests(tmp_path):
+    d = make_repo(tmp_path)
+    write_log(SID, [{"command": ".venv/bin/python -m pytest -q", "status": "ok"}])
+    _, out = run_verify({"session_id": SID, "cwd": str(d),
+                         "last_assistant_message": "All tests pass."})
+    assert not out
